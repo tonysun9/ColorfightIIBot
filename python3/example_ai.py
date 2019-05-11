@@ -9,7 +9,7 @@ game = Colorfight()
 
 # Connect to the server. This will connect to the public room. If you want to
 # join other rooms, you need to change the argument
-game.connect(room = 'public')
+game.connect(room = 'public1')
 
 # game.register should return True if succeed.
 # As no duplicate usernames are allowed, a random integer string is appended
@@ -18,13 +18,14 @@ game.connect(room = 'public')
 # You need to set a password. For the example AI, the current time is used
 # as the password. You should change it to something that will not change 
 # between runs so you can continue the game if disconnected.
-if game.register(username = 'ExampleAI' + str(random.randint(1, 100)), \
+if game.register(username = 'cheese4', \
         password = str(int(time.time()))):
     # This is the game loop
     while True:
         # The command list we will send to the server
         cmd_list = []
-        # The list of cells that we want to attack
+        # The list of cells that we want to attack, 
+        #this is here so that you dont attack the same ome multiple times (BAD!)
         my_attack_list = []
         # update_turn() is required to get the latest information from the
         # server. This will halt the program until it receives the updated
@@ -43,44 +44,82 @@ if game.register(username = 'ExampleAI' + str(random.randint(1, 100)), \
         # game.me.cells is a dict, where the keys are Position and the values
         # are MapCell. Get all my cells.
         for cell in game.me.cells.values():
-            # Check the surrounding position
-            for pos in cell.position.get_surrounding_cardinals():
-                # Get the MapCell object of that position
-                c = game.game_map[pos]
-                # Attack if the cost is less than what I have, and the owner
-                # is not mine, and I have not attacked it in this round already
-                # We also try to keep our cell number under 100 to avoid tax
-                if c.attack_cost < me.energy and c.owner != game.uid \
-                        and c.position not in my_attack_list \
-                        and len(me.cells) < 95:
-                    # Add the attack command in the command list
-                    # Subtract the attack cost manually so I can keep track
-                    # of the energy I have.
-                    # Add the position to the attack list so I won't attack
-                    # the same cell
-                    cmd_list.append(game.attack(pos, c.attack_cost))
-                    print("We are attacking ({}, {}) with {} energy".format(pos.x, pos.y, c.attack_cost))
-                    game.me.energy -= c.attack_cost
-                    my_attack_list.append(c.position)
+            
+            if (cell.building.name == "home"):
+                for pos in cell.position.get_surrounding_cardinals():
+                    #capture all the ones around it first?
+                    c = game.game_map[pos]
+                    if c.attack_cost < me.energy and c.owner != game.uid \
+                            and c.position not in my_attack_list:
+                        cmd_list.append(game.attack(pos, c.attack_cost)) 
+                        print("We are attacking surroung home ({}, {}) with {} energy".format(pos.x, pos.y, c.attack_cost))
+                        game.me.energy -= c.attack_cost
+                        my_attack_list.append(c.position)
+                        # the surrounding cells 
+                    if (c.owner == game.uid):
+                        #check the corners
+                        #d = game.game_map[pos.directional_offset(Direction.North)]
+                        # build fortress!
+                        if c.building.is_empty and me.gold >= 100:
+                            building = BLD_FORTRESS
+                            cmd_list.append(game.build(cell.position, building))
+                            print("We build FORTRESS NEAR HOME YEET {} on ({}, {})".format(building, c.position.x, c.position.y))
+                            me.gold -= 100
 
-            # If we can upgrade the building, upgrade it.
-            # Notice can_update only checks for upper bound. You need to check
-            # tech_level by yourself. 
-            if cell.building.can_upgrade and \
-                    (cell.building.is_home or cell.building.level < me.tech_level) and \
-                    cell.building.upgrade_gold < me.gold and \
-                    cell.building.upgrade_energy < me.energy:
-                cmd_list.append(game.upgrade(cell.position))
-                print("We upgraded ({}, {})".format(cell.position.x, cell.position.y))
-                me.gold   -= cell.building.upgrade_gold
-                me.energy -= cell.building.upgrade_energy
-                
-            # Build a random building if we have enough gold
-            if cell.owner == me.uid and cell.building.is_empty and me.gold >= 100:
-                building = random.choice([BLD_FORTRESS, BLD_GOLD_MINE, BLD_ENERGY_WELL])
-                cmd_list.append(game.build(cell.position, building))
-                print("We build {} on ({}, {})".format(building, cell.position.x, cell.position.y))
-                me.gold -= 100
+
+            else: 
+                # Check the surrounding position
+                for pos in cell.position.get_surrounding_cardinals():
+                    # Get the MapCell object of that position
+                    c = game.game_map[pos]
+                    
+                    # if the current one is home one, build some fortresses
+
+                    # Attack if the cost is less than what I have, and the owner
+                    # is not mine, and I have not attacked it in this round already
+                    # We also try to keep our cell number under 100 to avoid tax
+                    if c.attack_cost < me.energy and c.owner != game.uid \
+                            and c.position not in my_attack_list \
+                            and len(me.cells) < 100:
+                        # Add the attack command in the command list
+                        # Subtract the attack cost manually so I can keep track
+                        # of the energy I have.
+                        # Add the position to the attack list so I won't attack
+                        # the same cell
+                        cmd_list.append(game.attack(pos, c.attack_cost)) 
+                        print("We are attacking ({}, {}) with {} energy".format(pos.x, pos.y, c.attack_cost))
+                        game.me.energy -= c.attack_cost
+                        my_attack_list.append(c.position)
+
+                # If we can upgrade the building, upgrade it.
+                # Notice can_update only checks for upper bound. You need to check
+                # tech_level by yourself. 
+                if cell.building.can_upgrade and \
+                        (cell.building.is_home or cell.building.level < me.tech_level) and \
+                        cell.building.upgrade_gold < me.gold and \
+                        cell.building.upgrade_energy < me.energy:
+                    cmd_list.append(game.upgrade(cell.position))
+                    print("We upgraded ({}, {})".format(cell.position.x, cell.position.y))
+                    me.gold   -= cell.building.upgrade_gold
+                    me.energy -= cell.building.upgrade_energy
+                    
+                # If statements to check what building to make
+                if cell.owner == me.uid and cell.building.is_empty and me.gold >= 100:
+                    if (cell.natural_energy > cell.natural_gold && cell.natural_energy > cell.natural_cost):
+                        building = random.choice([BLD_FORTRESS, BLD_GOLD_MINE, BLD_ENERGY_WELL])
+                        cmd_list.append(game.build(cell.position, building))
+                        print("We build {} on ({}, {})".format(building, cell.position.x, cell.position.y))
+                        me.gold -= 100
+                    elif (cell.natural_gold > cell.natural_energy && cell.natural_gold > cell.natural_cost):
+                        building = random.choice([BLD_FORTRESS, BLD_GOLD_MINE, BLD_ENERGY_WELL])
+                        cmd_list.append(game.build(cell.position, building))
+                        print("We build {} on ({}, {})".format(building, cell.position.x, cell.position.y))
+                        me.gold -= 100
+                    else (cell.natural_gold > cell.natural_energy && cell.natural_gold > cell.natural_cost):
+                        building = random.choice([BLD_FORTRESS, BLD_GOLD_MINE, BLD_ENERGY_WELL])
+                        cmd_list.append(game.build(cell.position, building))
+                        print("We build {} on ({}, {})".format(building, cell.position.x, cell.position.y))
+                        me.gold -= 100
 
         
         # Send the command list to the server
