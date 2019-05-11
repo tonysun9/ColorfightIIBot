@@ -9,7 +9,7 @@ game = Colorfight()
 
 # Connect to the server. This will connect to the public room. If you want to
 # join other rooms, you need to change the argument
-game.connect(room = 'public3')
+game.connect(room = 'test-run1')
 
 # game.register should return True if succeed.
 # As no duplicate usernames are allowed, a random integer string is appended
@@ -18,7 +18,7 @@ game.connect(room = 'public3')
 # You need to set a password. For the example AI, the current time is used
 # as the password. You should change it to something that will not change 
 # between runs so you can continue the game if disconnected.
-if game.register(username = 'cheese2', \
+if game.register(username = 'cheese', \
 		password = str(int(time.time()))):
 	# This is the game loop
 	while True:
