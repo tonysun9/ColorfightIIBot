@@ -18,7 +18,7 @@ game.connect(room = 'smallpublic')
 # You need to set a password. For the example AI, the current time is used
 # as the password. You should change it to something that will not change 
 # between runs so you can continue the game if disconnected.
-if game.register(username = 'cheese', \
+if game.register(username = 'cheese2', \
 		password = str(int(time.time()))):
 	# This is the game loop
 	while True:
@@ -42,10 +42,22 @@ if game.register(username = 'cheese', \
 
 		# game.me.cells is a dict, where the keys are Position and the values
 		# are MapCell. Get all my cells.
-		
-		#outercells
 
-		for cell in game.me.cells.values():
+		#outercells
+		outercells = []
+
+		for i in game.me.cells.values():
+			#x = game.game_map[i]
+		#	surr = x.get_surrounding_cardinals()
+			count = 0
+			for j in i.position.get_surrounding_cardinals():
+				if(game.game_map[j].owner != game.uid):
+					count += count + 1
+			if (count >= 1):
+				outercells.append(i)
+
+		for cell in outercells:
+		#cell = random.choice(outercells)
 			# Check the surrounding position
 			if (cell.building.is_home):
 				for pos in cell.position.get_surrounding_cardinals():
@@ -82,7 +94,7 @@ if game.register(username = 'cheese', \
 				print("We are attacking ({}, {}) with {} energy".format(pos.x, pos.y, c.attack_cost))
 				game.me.energy -= c.attack_cost
 				my_attack_list.append(c.position)
-			if (len(me.cells) >= 98 and me.tech_level == 3):
+			if (len(me.cells) >= 98 and me.tech_level == 3 and c.owner != game.uid and c.position not in my_attack_list):
 				cmd_list.append(game.attack(pos, c.attack_cost))
 				print("We are attacking ({}, {}) with {} energy".format(pos.x, pos.y, c.attack_cost))
 				game.me.energy -= c.attack_cost
@@ -106,18 +118,18 @@ if game.register(username = 'cheese', \
 					# just build fortress
 					building = BLD_FORTRESS
 					cmd_list.append(game.build(cell.position, building))
-					print("We build BIG GOLD ON BIG GOLD {} on ({}, {})".format(building, cell.position.x, cell.position.y))
+					print("We build FORTRESS {} on ({}, {})".format(building, cell.position.x, cell.position.y))
 					me.gold -= 100
+				elif ((cell.natural_energy+2 >= cell.natural_gold)):
+						building = BLD_ENERGY_WELL
+						cmd_list.append(game.build(cell.position, building))
+						print("We build COOL ENERGY ON BIG ENERGY {} on ({}, {})".format(building, cell.position.x, cell.position.y))
+						me.gold -= 100
 				elif ((cell.natural_gold >= cell.natural_energy)):
 					building = BLD_GOLD_MINE
 					cmd_list.append(game.build(cell.position, building))
 					print("We build BIG GOLD ON BIG GOLD {} on ({}, {})".format(building, cell.position.x, cell.position.y))
 					me.gold -= 100
-				elif ((cell.natural_energy >= cell.natural_gold)):
-						building = BLD_ENERGY_WELL
-						cmd_list.append(game.build(cell.position, building))
-						print("We build COOL ENERGY ON BIG ENERGY {} on ({}, {})".format(building, cell.position.x, cell.position.y))
-						me.gold -= 100
 				else:
 					surround = cell.position.get_surrounding_cardinals()
 					num_build = 0
